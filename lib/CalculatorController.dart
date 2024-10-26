@@ -1,51 +1,64 @@
-import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:math_expressions/math_expressions.dart';
 
 class CalculatorController extends GetxController {
-
-  var display = ''.obs;
-  var lastResult = ''.obs;
+  var expression = ''.obs;
+  var result = ''.obs;
   var isResultShown = false.obs;
 
   void input(String value) {
     if (isResultShown.value) {
-      display.value = lastResult.value;
+      expression.value = '';
       isResultShown.value = false;
     }
-    display.value += value;
+
+    if (_isOperator(value) && expression.value.isNotEmpty && _isOperator(expression.value[expression.value.length - 1])) {
+      expression.value = expression.value.substring(0, expression.value.length - 1) + value;
+    } else {
+      expression.value += value;
+    }
+  }
+
+  bool _isOperator(String char) {
+    return ['+', '-', '×', '÷', '%'].contains(char);
   }
 
   void calculate() {
     try {
-      String finalExpression =
-      display.value.replaceAll('×', '*').replaceAll('÷', '/');
+      String finalExpression = expression.value
+          .replaceAll('×', '*')
+          .replaceAll('÷', '/');
+
+      finalExpression = finalExpression.replaceAllMapped(
+        RegExp(r'(\d+)%'),
+            (match) => '(${match[1]} * 0.01)',
+      );
+
       Parser parser = Parser();
-      Expression expression = parser.parse(finalExpression);
+      Expression exp = parser.parse(finalExpression);
       ContextModel contextModel = ContextModel();
 
-      num result = expression.evaluate(EvaluationType.REAL, contextModel);
+      num evalResult = exp.evaluate(EvaluationType.REAL, contextModel);
 
-      lastResult.value = (result % 1 == 0)
-          ? result.toInt().toString()
-          : result.toString();
+      result.value = (evalResult % 1 == 0)
+          ? evalResult.toInt().toString()
+          : evalResult.toStringAsFixed(6);
 
-      display.value = lastResult.value;
       isResultShown.value = true;
     } catch (e) {
-      display.value = 'Error';
+      result.value = 'Error';
     }
   }
 
   void clearAll() {
-    display.value = '';
-    lastResult.value = '';
+    expression.value = '';
+    result.value = '';
     isResultShown.value = false;
   }
 
   void backspace() {
-    if (display.value.isNotEmpty && !isResultShown.value) {
-      display.value = display.value.substring(0, display.value.length - 1);
+    if (expression.value.isNotEmpty && !isResultShown.value) {
+      expression.value = expression.value.substring(0, expression.value.length - 1);
     }
   }
 }
